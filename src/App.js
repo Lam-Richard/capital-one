@@ -28,7 +28,7 @@ const MyDatePicker = ({startDate, setStartDate, endDate, setEndDate, trip}) => {
           className="text-2xl w-10/12 border rounded-md" 
           placeholder={startDate}
           selected={startDate} 
-          excludeDates={Array.from(Array(100).keys()).map((value) => subDays(new Date(), value))}
+          excludeDates={Array.from(Array(100).keys()).map((value, index) => {if (index > 0) return subDays(new Date(), value) })}
           onChange={date => setStartDate(date)} />
         </div>
         {trip === 'one-way' ? null : 
@@ -40,7 +40,7 @@ const MyDatePicker = ({startDate, setStartDate, endDate, setEndDate, trip}) => {
             className="text-2xl w-10/12 border rounded-md" 
             placeholder={endDate}
             selected={endDate} 
-            excludeDates={Array.from(Array(100).keys()).map((value) => subDays(new Date(), value))}
+            excludeDates={Array.from(Array(100).keys()).map((value, index) => {if (index > 0) return subDays(new Date(), value) })}
             disabledDays={[{before: new Date()}]}
             onChange={date => setEndDate(date)} />
           </div>
@@ -75,20 +75,19 @@ const Results = ({result}) => {
 
   useEffect(()=> {
     if (result.hasOwnProperty('Quotes') && asc) {
-      console.log(asc);
       let real_result = Object.entries(result['Quotes']).sort((a,b) => a[1]['MinPrice'] - b[1]['MinPrice'])
-      console.log("bruh", real_result);
       setRealResult(real_result);
     } else if (result.hasOwnProperty('Quotes') && asc == false) {
-      console.log(asc);
-
       let real_result = Object.entries(result['Quotes']).sort((a,b) => b[1]['MinPrice'] - a[1]['MinPrice'])
-      console.log("bruh", real_result);
       setRealResult(real_result);
     }
   },[result, asc])
 
-
+  useEffect(()=> {
+    if (result.hasOwnProperty('errors')) {
+      alert("There are no more flights today! (Either that, or an unexpected error occured.)")
+    } 
+  },[result])
 
 
   function format () {
@@ -113,42 +112,47 @@ const Results = ({result}) => {
       <React.Fragment>
         <div className="h-3/5 w-11/12 border mt-2 flex flex-col items-center justify-start rounded-lg shadow-md overflow-y-auto">
           <br></br>
+          {realResult.length != 0 ? 
           <form className="flex flex-row-wrap items-center font-sans ml-8 mb-10">
-                <input type="radio" id="asc" name="asc" value="asc" defaultChecked 
-                onChange={() => setAsc(true)} ></input>
-                <label for="asc">&nbsp; By ascending price &nbsp;</label>
-                <input type="radio" id="desc" name="asc" value="desc" onChange={()=> {
-                  setAsc(false)
-              }}></input>
-                <label for="desc">&nbsp; By descending price</label>
+                  <input type="radio" id="asc" name="asc" value="asc" defaultChecked 
+                  onChange={() => setAsc(true)} ></input>
+                  <label for="asc">&nbsp; By ascending price &nbsp;</label>
+                  <input type="radio" id="desc" name="asc" value="desc" onChange={()=> {
+                    setAsc(false)
+                }}></input>
+                  <label for="desc">&nbsp; By descending price</label>
           </form>
-
-          {realResult.map((value, index) => {
-            let real_value = value[1];
-            let real_name;
-            if (index === 0) {
-              real_name = "h-1/6 w-11/12 mx-10 mx-3 flex flex-col justify-center items-center border border-green-400 rounded-lg mb-3";
-            } else {
-              real_name = "h-1/6 w-11/12 mx-10 mx-3 flex flex-col justify-center items-center border rounded-lg mb-3";
-            }
-            return (
-            <div key={index} className={real_name}>
-              <div className="flex flex-row justify-between w-full ">
-                <span className=" font-special text-2xl ml-5 mt-2 flex items-center"> 
-                  <div className="font-sans text-gray-400 text-xl flex items-center">Depart from &nbsp;</div> 
-                  {places[real_value['OutboundLeg']['OriginId']]}
-                   <div className="font-sans text-gray-400 text-xl flex items-center">&nbsp; to &nbsp;</div> 
-                   {places[real_value['OutboundLeg']['DestinationId']]}</span>
-                <div className=" mr-3 font-sans text-xl flex items-center">Starting at {currency}{real_value['MinPrice']}</div>
+          : null}
+          {realResult.length != 0 ?
+            realResult.map((value, index) => {
+              let real_value = value[1];
+              let real_name;
+              if (index === 0) {
+                real_name = "h-1/6 w-11/12 mx-10 mx-3 flex flex-col justify-center items-center border border-green-400 rounded-lg mb-3";
+              } else {
+                real_name = "h-1/6 w-11/12 mx-10 mx-3 flex flex-col justify-center items-center border rounded-lg mb-3";
+              }
+              return (
+              <React.Fragment>
+                
+              <div key={index} className={real_name}>
+                <div className="flex flex-row justify-between w-full ">
+                  <span className=" font-special text-2xl ml-5 mt-2 flex items-center"> 
+                    <div className="font-sans text-gray-400 text-xl flex items-center">Depart from &nbsp;</div> 
+                    {places[real_value['OutboundLeg']['OriginId']]}
+                    <div className="font-sans text-gray-400 text-xl flex items-center">&nbsp; to &nbsp;</div> 
+                    {places[real_value['OutboundLeg']['DestinationId']]}</span>
+                  <div className=" mr-3 font-sans text-xl flex items-center">Starting at {currency}{real_value['MinPrice']}</div>
+                </div>
+                <div className="flex flex-row justify-between w-full ">
+                  <div className=" ml-5 font-sans text-xl flex items-center">Airline(s): {carriers[real_value['OutboundLeg']['CarrierIds'][0]]} {carriers[real_value['OutboundLeg']['CarrierIds'][0]] === carriers[real_value['OutboundLeg']['CarrierIds'][0]] ? null : carriers[real_value['OutboundLeg']['CarrierIds'][0]]}</div>
+                  {/* <div className=" mr-3 font-sans text-xl flex items-center">As of {moment(value['QuoteDateTime']).format('MM-DD-YYYY hh:mm:ss')}</div> */}
+                </div>
               </div>
-              <div className="flex flex-row justify-between w-full ">
-                <div className=" ml-5 font-sans text-xl flex items-center">Airline(s): {carriers[real_value['OutboundLeg']['CarrierIds'][0]]} {carriers[real_value['OutboundLeg']['CarrierIds'][0]] === carriers[real_value['OutboundLeg']['CarrierIds'][0]] ? null : carriers[real_value['OutboundLeg']['CarrierIds'][0]]}</div>
-                {/* <div className=" mr-3 font-sans text-xl flex items-center">As of {moment(value['QuoteDateTime']).format('MM-DD-YYYY hh:mm:ss')}</div> */}
-              </div>
-            </div>
-            )
-
-          })}
+              </React.Fragment>
+              )
+            })
+          : null} 
 
         </div>
       </React.Fragment>
@@ -157,9 +161,6 @@ const Results = ({result}) => {
   
   useEffect(()=> {
     format();
-    // console.log("Raw result: ", result)
-    // console.log("Formatted carriers: ", carriers)
-    // console.log("Formatted places: ", places)
   },[result])
 
   return (
@@ -173,7 +174,6 @@ const AsyncPicker = ({icon, placeholder, selected, setSelected, selector}) => {
   
 
   function handleQuery (query) {
-    console.log("Query: ", query);
     if (query['inputValue'].length <= 2) {
       return "Start typing..."
     } else {
@@ -210,8 +210,6 @@ const Picker = ({icon, placeholder, options, setSelected}) => {
 function App() {
 
   const [currencies, setCurrencies] = useState([]);
-  const [asc, setAsc] = useState(true);
-
   
   useEffect(()=>{
     CurrenciesList().then((value)=> setCurrencies(value));
@@ -224,17 +222,6 @@ function App() {
   const [endDate, setEndDate] = useState(new Date());
   const [result, setResult] = useState({});
   const [trip, setTrip] = useState('round-trip');
-
-
-  useEffect(()=> {
-    console.log({
-      "from": from,
-      "to": to,
-      "currency": currency,
-      "start date formatted": moment(startDate).format('YYYY-MM-DD'),
-    })
-    
-  },[from, to, currency, startDate, endDate])
 
   async function getCurrencies() {
     let result = await fetch("https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/reference/v1.0/currencies", {
@@ -294,7 +281,6 @@ function App() {
     if (trip !== 'round-trip') {
       setEndDate('');
     }
-    console.log("Trip:", trip)
   },[trip])
 
   function handleSubmit () {
@@ -303,9 +289,6 @@ function App() {
         alert("Please fill out all required fields.");
       }
       else {
-        // Need a wrapper function that calls callBrowseQuotes
-        // Wrapper function will need to store quotes into an array of objects in a state variable
-        // And then if that array is ever non-empty, some rendering needs to happen
         callBrowseQuotes().then((value) => setResult(value));
       }
     }
@@ -313,14 +296,14 @@ function App() {
       if (!startDate || !endDate || !from || !to || !currency) {
         alert("Please fill out all required fields.");
       }
-      else if (startDate.getTime() >= endDate.getTime()) {
+      else if (startDate.getTime() > endDate.getTime()) {
         alert("Time travel is not currently supported");
       }
       else {
-        // Need a wrapper function that calls callBrowseQuotes
-        // Wrapper function will need to store quotes into an array of objects in a state variable
-        // And then if that array is ever non-empty, some rendering needs to happen
-        callBrowseQuotes().then((value) => setResult(value));
+        callBrowseQuotes().then((value) => {
+          setResult(value);
+        });
+
       }
     }
    
@@ -337,13 +320,6 @@ function App() {
       real_end = ''
     }
     let real_currency = currency['value']['Code']
-    console.log("The reals:", {
-      'real_from': real_from,
-      'real_to': real_to,
-      'real_start': real_start,
-      'real_end': real_end,
-      'real_currency': real_currency
-    })
     let result = await fetch(`https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsequotes/v1.0/${COUNTRY}/${real_currency}/${LOCALE}/${real_from}/${real_to}/${real_start}/${real_end}`, {
       "method": "GET",
       "headers": {
